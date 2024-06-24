@@ -27,13 +27,29 @@ public class FileRead {
             {
                 String fileName = s; 
                 String fileWrite = fileName + ".csv";
-                String line = null;
-                String big = null;
-                String n1 = null;
+                String line = null;               
+                String bigLoop = null;
+                String[] big = null;
+                String n1Loop = null;
+                String[] n1 = null;
                 String ctt = null; // Used to iterate through the line items
-                String store = null; // Used to store the store number
-                String order = null; // Used to store PO number
+                String itdLoop = null;
+                String[] itd = null;
+
+                String invDate = null;
+                String invNum = null;
+                String PODate = null;
+                String PONum = null;
                 String drCr;
+                String store = null; // Used to store the store number
+
+
+                String termsNetDay = null;
+                String termsNetDueDate = null;
+                String tds = null;
+                Float  tdsFloat;
+
+                            
                 try {
                     FileReader fileReader = new FileReader(fileName);
                     FileWriter fileWriter = new FileWriter(fileWrite);
@@ -44,36 +60,50 @@ public class FileRead {
                         /* Parse the BIG segment */
                         int begin = line.indexOf("BIG");
                         int end = line.indexOf("~", begin);
-                        big = line.substring(begin, end+1);
-                        System.out.println(big); 
+                        bigLoop = line.substring(begin, end);
 
-                        /* Parse the PO number */
-                        int dash = big.indexOf("**");
-                        System.out.println("**: " + dash);
-                        int star = big.indexOf("*", dash+2);
-                        System.out.println("Star: " + star);
-                        order = big.substring(dash+2, star);
-                        System.out.println("Order #: " + order);
+                        big = bigLoop.split("\\*");
+                        invDate = big[1];
+                        invNum = big[2];
+                        PODate = big[3];
+                        PONum = big[4];
+                        drCr = big[7];
 
-                        /* Parse the CR or DR memo flag */
-                        int start = -1;
-                        start = big.indexOf("CR");
-                        if(start == -1)
-                            start = big.indexOf("DR");
-                        drCr = big.substring(start, start+2);
+                        System.out.println("Inv Date:" + invDate);
+                        System.out.println("Inv Num:" + invNum);
+                        System.out.println("PO Date:" + PODate);
+                        System.out.println("PO Num:" + PONum);
                         System.out.println("drCr: " + drCr);
 
-                        /* Parse the N1*BY segment */
+                        /* Parse the N1*BY segment for the Cardinal account number*/
                         begin = line.indexOf("N1*BY");
                         end = line.indexOf("~", begin);
-                        n1 = line.substring(begin, end+1);
-                        System.out.println(n1); 
-
-                        /* Parse the Cardinal account number */
-                        dash = n1.indexOf("91*");
-                        star = n1.indexOf("~");
-                        store = n1.substring(dash+3, star);
+                        n1Loop = line.substring(begin, end);
+                        n1 = n1Loop.split("\\*");
+                        store = n1[4];
                         System.out.println("Store #: " + store);
+                        
+
+                        /* Parse the ITD segment */
+                        begin = line.indexOf("ITD");
+                        end = line.indexOf("~", begin);
+                        itdLoop = line.substring(begin, end);
+
+                        itd = itdLoop.split("\\*");
+
+                    	termsNetDueDate = itd[6];    
+                        termsNetDay = itd[7];
+
+                        System.out.println("Terms Net Due Date: " + termsNetDueDate);
+                        System.out.println("Terms Net Day: " + termsNetDay);
+
+                        /* Parse the TDS segment */
+                        begin = line.indexOf("TDS*");
+                        end = line.indexOf("~", begin);
+                        tds = line.substring(begin+4, end);
+                        tdsFloat = Float.parseFloat(tds)/100;
+                        System.out.println(tdsFloat);
+
 
                         /* Parse the CTT segment */
                         begin = line.indexOf("CTT*");
@@ -84,40 +114,51 @@ public class FileRead {
                         System.out.println("CTT: " + ctt);
                         int oldend = line.indexOf("IT1"); //Used to keep jumping forward
 
+                        
                         /* Iterate over the IT1's */
                         for(int i = 0; i < Integer.parseInt(ctt); i++)
                         {
                             /* Declarations */
-                            String it1 = null;
+                            String it1Loop = null;
+                            String[] it1 = null;
                             String qty = null;
+                            String unit = null;
+                            String unitPrice = null;
+                            String upc = null;
                             String ndc = null;
                             String cin = null;
+                            String pidLoop = null;
+                            String[] pid = null;
+                            String prodDesc = null;
 
                             begin = line.indexOf("IT1", oldend);
                             end = line.indexOf("~", begin);
-
+                            it1Loop = line.substring(begin, end);
+                            it1 = it1Loop.split("\\*");
                             /* Parse each IT1 into respective parts */
-                            /* QTY */
-                            it1 = line.substring(begin, end+1);
-                            int starBegin = it1.indexOf("IT1**");
-                            int starEnd = it1.indexOf("*", starBegin+5);
-                            qty = it1.substring(starBegin+5, starEnd);
+                            qty = it1[2];
+                            unit = it1[3];
+                            unitPrice = it1[4];
+                            upc = it1[7];
+                            ndc = it1[9];
+                            cin = it1[11];
+                            /* Parse PID loop */                            
+                            begin = line.indexOf("PID", oldend);
+                            end = line.indexOf("~", begin);
+                            pidLoop = line.substring(begin, end);
+                            pid = pidLoop.split("\\*");
+                            prodDesc = pid[5];
+                            
+                            System.out.println("Order: " + PONum + ", Store: " + store + ", QTY: " + qty + ", Unit: " + unit + ", Unit Price: " + unitPrice + ", UPC: " + upc + 
+                                ", NDC: " + ndc + ", CIN: " + cin + ", Prod Desc: " + prodDesc);
 
-                            /* NDC */
-                            starBegin = it1.indexOf("N4*");
-                            starEnd = it1.indexOf("*VC");
-                            ndc = it1.substring(starBegin+4, starEnd);
 
-                            /* CIN */
-                            starBegin = it1.indexOf("VC*");
-                            starEnd = it1.indexOf("~", starBegin);
-                            cin = it1.substring(starBegin+3, starEnd);
-                            System.out.println("Order: " + order + ", Store: " + store + ", QTY: " + qty + ", NDC: " + ndc + ", CIN: " + cin);
+                            System.out.println("Total: " + tds);
 
                             /* Write the file */
                             bufferedWriter.write(store);
                             bufferedWriter.write("|");
-                            bufferedWriter.write(order);
+                            bufferedWriter.write(PONum);
                             bufferedWriter.write("|");
                             bufferedWriter.write(ndc);
                             bufferedWriter.write("|");
